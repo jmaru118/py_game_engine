@@ -1,0 +1,71 @@
+material GUI/lifebar
+{
+	technique
+	{
+		pass
+		{
+			lighting off
+			scene_blend alpha_blend
+			depth_check off
+
+			texture_unit
+			{
+				texture lifebar.png
+			}
+		}
+	}
+}
+
+material GUI/Weapons/frame
+{
+	technique
+	{
+		pass
+		{
+			lighting off
+			scene_blend alpha_blend
+			depth_check off
+
+			texture_unit
+			{
+				texture weaponFrame.tga
+			}
+		}
+	}
+}
+
+material GUI/Weapons/pistol
+{
+	technique
+	{
+		pass
+		{
+			lighting off
+			scene_blend alpha_blend
+			depth_check off
+
+			texture_unit
+			{
+				texture pistol.png
+			}
+		}
+	}
+}
+
+material GUI/Border
+{
+	technique
+	{
+		pass
+		{
+			lighting off
+			scene_blend alpha_blend
+			depth_check off
+
+			texture_unit
+			{
+				texture border.tga
+			}
+		}
+	}
+}

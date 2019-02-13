@@ -1,0 +1,237 @@
+#Travis Walker and Shawn White
+import ogre.renderer.OGRE as ogre
+from physics import Physics
+from renderer import Renderer
+from vector import MyVector
+import math
+
+
+class Entity:
+    def __init__(self, engine, id, pos = MyVector(0,0,0), mesh = 'robot.mesh', 
+                                  vel = MyVector(0,0,0), yaw = 0):
+        self.engine = engine
+        self.id = id
+        self.pos = pos
+        self.vel = ogre.Vector3(0, 0, 0)
+        self.mesh = mesh
+        self.node  = None
+        self.yaw = 0
+        self.deltaSpeed = 5
+        self.deltaYaw = 0
+        self.speed = 0.0
+        self.heading = 0.0
+        self.aspectTypes = [Physics, Renderer]
+        self.aspects = []
+        self.eid = 0
+        self.box = 0
+
+    def init(self):
+        self.initAspects()
+
+
+    def initAspects(self):
+        for aspType in self.aspectTypes:
+            self.aspects.append(aspType(self))
+
+    def tick(self, dtime):
+        for aspect in self.aspects:
+            aspect.tick(dtime)
+        self.box =self.aspects[1].bound
+        if self.uiname == 'bullet'+str(self.id):
+            self.bulletTick(dtime)
+        if self.uiname == 'enemy'+str(self.id):
+            self.checkRange()
+
+            
+            
+          
+
+
+    def __str__(self):
+        x = "Entity: %s \nPos: %s, Vel: %s, yaw: %f" % (self.id, str(self.pos), str(self.vel), self.yaw)
+        return x
+
+    def shoot(self,bullet):
+        bullet.node.translate( self.pos )
+        bullet.pos = self.pos
+        bullet.speed = 1700
+	
+        quat = self.node.getOrientation()
+        bullet.heading = quat.getYaw().valueRadians()
+
+        bullet.shotBy = self.id
+
+
+        bullet.check = True
+        print "shoot"
+
+    def bulletTick(self,dtime):
+        if self.check:
+            for Entity in self.engine.entityMgr.entities:
+                if self.engine.entityMgr.entities[Entity].uiname is not self.uiname:
+                  if self.engine.entityMgr.entities[Entity].id is not self.shotBy:
+                    if self.box.intersects(self.engine.entityMgr.entities[Entity].box):
+                        if self.engine.entityMgr.entities[Entity].type == "enemy":
+                            self.engine.entityMgr.entities[Entity].kill(self.shotBy)
+                        if self.engine.entityMgr.entities[Entity].type == "player":
+                            self.engine.entityMgr.entities[Entity].score += 1
+                            #self.engine.entityMgr.entities[Entity].kill()
+                            
+                        print "Bullet collision"
+                        self.destroyBullet()
+                        return True
+
+            return False
+        
+    def destroyBullet(self):
+        
+        self.node.translate( (0,-200,0) )
+        self.pos=ogre.Vector3(0, -200, 0)
+        self.check= False
+        self.acceleration = 0
+        self.desiredSpeed = 0
+        self.speed = 0
+        
+        
+      
+
+
+class Player(Entity):
+    def __init__(self, engine, id, pos = MyVector(0,0,0), vel = MyVector(0, 0, 0), yaw = 0):
+        Entity.__init__(self, engine, id, pos = pos, vel = vel, yaw = yaw)
+        print "Player init"
+        self.mesh = 'iron.mesh'
+        self.uiname = 'player' + str(id)
+        self.acceleration = 10
+        self.turningRate = 10
+        self.maxSpeed = 10
+        self.desiredSpeed = 0
+        self.desiredHeading = 0
+        self.speed = 0
+        self.heading = 0
+        self.box = 0
+        self.type = "player"
+        self.spawnPoint = pos
+        self.score = 0
+
+    def kill(self):
+
+        self.score -= 5
+        if self.id == 0:
+            self.node.translate(-2000, 0, -2500)
+            self.pos = MyVector(-2000, 0, -2500)
+            self.engine.gfxMgr.camYawNode1.translate(-2000, 0, -2500)
+        elif self.id == 1:
+            self.node.translate(2000, 0, 2500)
+            self.pos = MyVector(2000, 0, 2500)
+            self.engine.gfxMgr.camYawNode2.translate(2000, 0, 2500)
+       # elif (self.id == 1):
+           # self.engine.gameMgr.player1.node.translate(self.pos)
+        
+
+
+class Bullet(Entity):
+    def __init__(self, engine, id, pos = MyVector(0,0,0), vel = MyVector(10, 0, 0), yaw = 0):
+        Entity.__init__(self, engine, id, pos = pos, vel = vel, yaw = yaw)
+        print "Bullet init"
+        self.mesh = 'sphere.mesh'
+        self.uiname = 'bullet' + str(id)
+        self.acceleration = 10
+        self.turningRate = 0
+        self.maxSpeed = 300
+        self.desiredSpeed = 0
+        self.desiredHeading = 0
+        self.speed = 0
+        self.heading = 0
+        self.box = 0
+        self.check = True
+        self.shotBy = -1
+        self.type = "bullet"
+
+class Wall(Entity):
+    def __init__(self, engine, id, pos = MyVector(0,0,0), vel = MyVector(0, 0, 0), yaw = 0):
+        Entity.__init__(self, engine, id, pos = pos, vel = vel, yaw = yaw)
+        print "wall init"
+        self.mesh = 'cube.mesh'
+        self.uiname = 'wall' + str(id)
+        self.acceleration = 0
+        self.turningRate = 0
+        self.maxSpeed = 0
+        self.desiredSpeed = 0
+        self.desiredHeading = 0
+        self.speed = 0
+        self.heading = 0
+        self.box = 0
+        self.type = "wall"
+
+class Enemy(Entity):
+    def __init__(self, engine, id, pos = MyVector(0,0,0), vel = MyVector(0, 0, 0), yaw = 0):
+        Entity.__init__(self, engine, id, pos = pos, vel = vel, yaw = yaw)
+        print "wall init"
+        self.mesh = 'robot.mesh'
+        self.uiname = 'enemy' + str(id)
+        self.acceleration = 0
+        self.turningRate = 0
+        self.maxSpeed = 0
+        self.desiredSpeed = 0
+        self.desiredHeading = 0
+        self.speed = 0
+        self.heading = 0
+        self.box = 0
+        self.type = "enemy"
+
+
+    def checkRange(self):
+        player1 = self.engine.entityMgr.entities[0];
+        player2 = self.engine.entityMgr.entities[1];
+        if self.pos.distance(player1.pos) < 800:
+            print "PLayer 1 in range of enemy : " + str(self.id)
+            self.aggroPlayer(player1)
+
+        elif self.pos.distance(player2.pos) < 800:
+            print "Player 2 in range of enemy : " + str(self.id)
+            self.aggroPlayer(player2)
+        else:
+            self.speed = 0
+
+    def aggroPlayer(self, player):
+        direction = player.pos - self.pos
+        #direction.normalise()
+        angle = direction.angleBetween(MyVector(1,0,0))
+
+        if self.pos.z <= player.pos.z and self.pos.x <= player.pos.x:
+            self.heading = angle.valueRadians() - (math.pi / 2)
+
+        elif self.pos.z <= player.pos.z and self.pos.x >= player.pos.x:
+            self.heading = angle.valueRadians() + (math.pi / 2)
+
+        elif self.pos.z >= player.pos.z and self.pos.x <= player.pos.x:
+            self.heading = angle.valueRadians()
+
+        elif self.pos.z >= player.pos.z and self.pos.x >= player.pos.x:
+            self.heading = angle.valueRadians()
+
+        self.speed = 600
+
+    def kill(self,player):
+        print "kill"
+        self.pos = MyVector(9000,-200,9000)
+        self.node.translate(9000,-200,9000)
+        self.engine.entityMgr.entities[player].score += 1
+        self.engine.entityMgr.killed += 1
+
+        #temp here
+        if self.engine.entityMgr.killed >= 9:
+            print "player 1 score: " + str(self.engine.entityMgr.entities[0].score)
+            print "player 2 score: " + str(self.engine.entityMgr.entities[1].score)
+            if self.engine.entityMgr.entities[0].score > self.engine.entityMgr.entities[1].score:
+                print "Player 1 wins"
+            else:
+                print "Player 2 wins"
+            self.engine.stop()
+        
+    def respawn(self):
+        pass
+
+
+        
